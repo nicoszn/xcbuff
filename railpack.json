@@ -2,11 +2,11 @@
   "$schema": "https://schema.railpack.com",
   "packages": {
     "python": "3.11",
-    "node": "22"
+    "node": "22",
+    "deno": "latest"
   },
   "deploy": {
     "aptPackages": ["ffmpeg"],
-    "startCommand": "uvicorn main:app --host 0.0.0.0 --port $PORT",
-    "previewCommand": "python3 -m http.server $PORT --directory static"
+    "startCommand": "uvicorn main:app --host 0.0.0.0 --port $PORT"
   }
 }
