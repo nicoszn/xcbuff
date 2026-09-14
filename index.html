@@ -1,0 +1,787 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Video Tools — FFmpeg API</title>
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  <style>
+    :root {
+      --bg: #0b0d11;
+      --panel: #111318;
+      --panel-2: #161a21;
+      --ink: #e8edf5;
+      --muted: #8a93a6;
+      --line: #222734;
+      --accent: #4f9eff;
+      --accent-2: #7c5cff;
+      --danger: #ff5a6e;
+      --ok: #4fd18b;
+      --radius: 12px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; }
+    body {
+      background: radial-gradient(1200px 600px at 10% -10%, #16213a 0%, var(--bg) 60%);
+      color: var(--ink);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      padding: 40px 20px 80px;
+    }
+
+    .wrap { max-width: 1100px; margin: 0 auto; }
+
+    header.brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 28px;
+    }
+
+    .logo {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid; place-items: center;
+      color: #fff;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      box-shadow: 0 12px 30px -10px rgba(79,158,255,0.45);
+    }
+
+    .title { font-size: 22px; font-weight: 600; letter-spacing: -0.2px; }
+    .sub { color: var(--muted); font-size: 14px; margin-top: 2px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 16px;
+    }
+
+    @media (min-width: 880px) {
+      .grid { grid-template-columns: 1fr 1fr; }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px;
+      transition: border-color 0.2s;
+    }
+    .card h3 {
+      margin: 0 0 6px;
+      font-size: 16px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .card .hint {
+      color: var(--muted);
+      font-size: 13px;
+      margin: 0 0 14px;
+    }
+
+    .chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      color: var(--muted);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 12.5px;
+      width: fit-content;
+    }
+    .chip .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+    .chip .dot.ok { background: var(--ok); }
+    .chip .dot.err { background: var(--danger); }
+
+    label.field {
+      display: block;
+      font-size: 13px;
+      font-weight: 500;
+      color: var(--muted);
+      margin: 14px 0 6px;
+    }
+    label.field:first-of-type { margin-top: 4px; }
+
+    input, select, textarea {
+      width: 100%;
+      background: var(--bg);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-size: 14px;
+      transition: border 0.2s, box-shadow 0.2s;
+    }
+    input:focus, select:focus, textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(79,158,255,0.15);
+    }
+    textarea { resize: vertical; min-height: 60px; }
+
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+    @media (max-width: 480px) { .row { grid-template-columns: 1fr; } }
+
+    .actions { display: flex; gap: 10px; margin-top: 18px; flex-wrap: wrap; }
+    button.btn {
+      background: var(--accent);
+      color: #0b0d11;
+      border: none;
+      border-radius: 10px;
+      padding: 11px 16px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      transition: opacity 0.2s, transform 0.05s;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+    button.btn:hover { opacity: 0.9; }
+    button.btn:active { transform: translateY(1px); }
+    button.btn.ghost {
+      background: transparent;
+      color: var(--ink);
+      border: 1px solid var(--line);
+    }
+    button.btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+    button.btn[disabled] { opacity: 0.4; cursor: not-allowed; }
+
+    .upload-box {
+      border: 2px dashed var(--line);
+      border-radius: 12px;
+      padding: 26px 18px;
+      text-align: center;
+      cursor: pointer;
+      transition: border 0.2s, background 0.2s;
+      background: var(--bg);
+    }
+    .upload-box:hover { border-color: var(--accent); background: rgba(79,158,255,0.04); }
+    .upload-box .ico { color: var(--muted); font-size: 28px; margin-bottom: 8px; display:block; }
+    .upload-box .label { color: var(--ink); font-weight: 500; font-size: 14px; }
+    .upload-box .label small { display:block; color: var(--muted); margin-top: 4px; }
+
+    .file-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      padding: 6px 10px;
+      border-radius: 999px;
+      font-size: 13px;
+    }
+    .file-pill .remove { cursor: pointer; color: var(--danger); padding: 2px; }
+    .file-pill .size { color: var(--muted); margin-left: 6px; }
+
+    .progress {
+      margin-top: 14px;
+      border-radius: 10px;
+      background: var(--bg);
+      height: 12px;
+      overflow: hidden;
+      border: 1px solid var(--line);
+    }
+    .progress .bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--accent), var(--accent-2));
+      transition: width 0.25s ease;
+    }
+
+    .log {
+      background: #07090d;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 12px;
+      font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+      font-size: 12.5px;
+      color: #c3d0e6;
+      max-height: 220px;
+      overflow: auto;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+    .log .ok { color: var(--ok); }
+    .log .err { color: var(--danger); }
+    .log .dim { color: var(--muted); }
+
+    .result {
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: var(--panel-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      font-size: 13px;
+    }
+    .result code {
+      color: var(--accent);
+      background: rgba(79,158,255,0.12);
+      padding: 2px 6px;
+      border-radius: 6px;
+      font-size: 12.5px;
+    }
+    .result a.btn { margin-top: 10px; text-decoration: none; }
+    .result dl { margin: 8px 0 0; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; }
+    .result dt { color: var(--muted); }
+
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #1a1e28;
+      color: var(--ink);
+      border: 1px solid var(--line);
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13.5px;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      opacity: 0;
+      transition: opacity 0.2s;
+      pointer-events: none;
+      z-index: 50;
+    }
+    .toast.show { opacity: 1; }
+    .toast.err { border-color: var(--danger); color: var(--danger); }
+
+    .empty { color: var(--muted); font-size: 13px; padding: 8px 0; }
+    .files { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  </style>
+</head>
+<body>
+  <div class="wrap" x-data="app()" x-init="init()">
+    <header class="brand">
+      <div class="logo">V</div>
+      <div>
+        <div class="title">Video Tools</div>
+        <div class="sub">FFmpeg API playground — convert, split, merge, extract, compress, aspect ratio.</div>
+      </div>
+      <div class="chip" :class="statusChip" :style="statusChip ? 'margin-left:auto' : ''">
+        <span class="dot" :class="statusDot"></span>
+        <span x-text="statusText"></span>
+      </div>
+    </header>
+
+    <div class="grid">
+      <!-- Upload / file bank -->
+      <section class="card">
+        <h3><span x-text="files.length ? 'Files (' + files.length + ')' : 'Upload files'"></span></h3>
+        <div class="hint" x-show="!files.length">Upload media once, then reuse it across tools.</div>
+
+        <template x-if="!files.length">
+          <div class="upload-box" @click="fileInput.click()">
+            <span class="ico">📁</span>
+            <div class="label">Drop files here or click to upload<br /><small>MP4, MOV, MKV, MP3, WAV, WebM, and more.</small></div>
+          </div>
+        </template>
+
+        <input type="file" accept="video/*,audio/*" multiple x-ref="fileInput" @change="onFilesSelected($event)" style="display:none" />
+
+        <div class="files" x-show="files.length">
+          <template x-for="(f, i) in files" :key="f.id">
+            <span class="file-pill">
+              <span x-text="f.name"></span>
+              <span class="size" x-text="fmtBytes(f.size)"></span>
+              <span class="remove" @click="files.splice(i, 1)">✕</span>
+            </span>
+          </template>
+        </div>
+
+        <div class="progress" x-show="loading"><div class="bar" :style="'width:'+progressPct+'%'"></div></div>
+        <div class="log" x-show="logs.length" x-html="logs.map(l => l.cls ? `<span class='${l.cls}'>${l.line}</span>` : l.line).join('\n')"></div>
+      </section>
+
+      <!-- Convert -->
+      <section class="card">
+        <h3>Convert</h3>
+        <div class="hint">Transcode to a new format, codec, resolution, or framerate.</div>
+        <div class="row">
+          <div>
+            <label class="field">Target format</label>
+            <select x-model="cv.format">
+              <option value="mp4">MP4</option>
+              <option value="mkv">MKV</option>
+              <option value="webm">WebM</option>
+              <option value="mov">MOV</option>
+              <option value="avi">AVI</option>
+            </select>
+          </div>
+          <div>
+            <label class="field">Video codec</label>
+            <select x-model="cv.video_codec">
+              <option value="libx264">H.264 (libx264)</option>
+              <option value="libx265">H.265 (libx265)</option>
+              <option value="copy">Copy (no re-encode)</option>
+              <option value="vp9">VP9</option>
+            </select>
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label class="field">Resolution (WxH)</label>
+            <input type="text" x-model="cv.resolution" placeholder="1280x720" />
+          </div>
+          <div>
+            <label class="field">Frame rate</label>
+            <input type="number" x-model="cv.fps" placeholder="24" min="1" />
+          </div>
+        </div>
+        <div class="row">
+          <div>
+            <label class="field">CRF <span class="dim" x-text="'(smaller=best, '+cv.crf+')'"></span></label>
+            <input type="range" min="0" max="51" x-model="cv.crf" @input="cv.crfLabel = 'CRF '+cv.crf" />
+            <div class="dim" x-text="cv.crfLabel || 'CRF '+cv.crf"></div>
+          </div>
+          <div>
+            <label class="field">Preset</label>
+            <select x-model="cv.preset">
+              <option>ultrafast</option><option>superfast</option><option>veryfast</option>
+              <option>faster</option><option>fast</option><option>medium</option>
+              <option>slow</option><option>slower</option><option>veryslow</option>
+            </select>
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" @click="convert()" :disabled="!files.length || loading">Convert</button>
+        </div>
+      </section>
+
+      <!-- Split -->
+      <section class="card">
+        <h3>Split</h3>
+        <div class="hint">Cut a segment from a video by time range.</div>
+        <div class="row">
+          <div>
+            <label class="field">Start</label>
+            <input type="text" x-model="sp.start" placeholder="00:00:05" />
+          </div>
+          <div>
+            <label class="field">End</label>
+            <input type="text" x-model="sp.end" placeholder="00:01:00" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" @click="split()" :disabled="!files.length || loading">Split</button>
+        </div>
+      </section>
+
+      <!-- Merge -->
+      <section class="card">
+        <h3>Merge</h3>
+        <div class="hint">Combine multiple uploaded files into one. Order matches upload order.</div>
+        <div class="actions">
+          <button class="btn" @click="merge()" :disabled="files.length < 2 || loading">Merge selected</button>
+        </div>
+      </section>
+
+      <!-- Extract -->
+      <section class="card">
+        <h3>Extract</h3>
+        <div class="hint">Pull audio, frames, or metadata from a file.</div>
+        <div class="row">
+          <div>
+            <label class="field">Audio format</label>
+            <select x-model="ex.audioFormat">
+              <option value="mp3">MP3</option>
+              <option value="m4a">M4A</option>
+              <option value="wav">WAV</option>
+              <option value="flac">FLAC</option>
+              <option value="ogg">OGG</option>
+            </select>
+          </div>
+          <div>
+            <label class="field">Frames every (sec)</label>
+            <input type="number" x-model="ex.frameInterval" min="0.1" step="0.1" placeholder="1" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" @click="extractAudio()" :disabled="!files.length || loading">Extract audio</button>
+          <button class="btn ghost" @click="extractFrames()" :disabled="!files.length || loading">Extract frames</button>
+          <button class="btn ghost" @click="extractMetadata()" :disabled="!files.length || loading">Metadata</button>
+        </div>
+      </section>
+
+      <!-- Aspect ratio -->
+      <section class="card">
+        <h3>Aspect ratio</h3>
+        <div class="hint">Pad, scale, or crop to a target resolution.</div>
+        <div class="row">
+          <div>
+            <label class="field">Width</label>
+            <input type="number" x-model="ar.width" min="1" placeholder="1920" />
+          </div>
+          <div>
+            <label class="field">Height</label>
+            <input type="number" x-model="ar.height" min="1" placeholder="1080" />
+          </div>
+        </div>
+        <div class="row">
+          <div class="chip">
+            Method:
+            <select x-model="ar.method" style="border:none;background:transparent;color:var(--ink);font:inherit;padding:0;margin-left:6px">
+              <option value="pad">Pad (black bars)</option>
+              <option value="scale">Scale</option>
+              <option value="crop">Crop</option>
+            </select>
+          </div>
+          <div class="chip">
+            CRF:
+            <input type="number" x-model="ar.crf" min="0" max="51" style="width:90px;border:none;background:transparent;color:var(--ink);font:inherit;padding:0" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" @click="aspectRatio()" :disabled="!files.length || loading">Apply</button>
+        </div>
+      </section>
+
+      <!-- Compress -->
+      <section class="card">
+        <h3>Compress</h3>
+        <div class="hint">Re-encode at a higher CRF to reduce file size. Optionally target a max size.</div>
+        <div class="row">
+          <div>
+            <label class="field">CRF</label>
+            <input type="number" x-model="cmp.crf" min="0" max="51" placeholder="28" />
+          </div>
+          <div>
+            <label class="field">Target max size (MB, optional)</label>
+            <input type="number" x-model="cmp.maxSizeMb" min="1" placeholder="50" />
+          </div>
+        </div>
+        <div class="actions">
+          <button class="btn" @click="compress()" :disabled="!files.length || loading">Compress</button>
+        </div>
+      </section>
+
+      <!-- Result / output bank -->
+      <section class="card">
+        <h3>Output</h3>
+        <div class="hint">Generated files appear here. Download or clear them.</div>
+        <div x-show="outputs.length">
+          <div class="files">
+            <template x-for="(o, i) in outputs" :key="o.id">
+              <span class="file-pill">
+                <a class="btn ghost" :href="'/output/'+o.name" :download="o.name" target="_blank" style="padding:4px 8px;border:none">
+                  <span x-text="o.name"></span>
+                  <span class="size" x-text="fmtBytes(o.size)"></span>
+                </a>
+                <span class="remove" @click="outputs.splice(i,1)">✕</span>
+              </span>
+            </template>
+          </div>
+        </div>
+        <div class="empty" x-show="!outputs.length && !lastResult">No outputs yet.</div>
+        <div class="result" x-show="lastResult">
+          <template x-if="lastResult.kind === 'error'">
+            <div class="err" x-text="lastResult.message"></div>
+          </template>
+          <template x-if="lastResult.kind === 'file'">
+            <div>Generated: <code x-text="lastResult.name"></code></div>
+            <dl x-show="lastResult.meta">
+              <template x-for="(v, k) in lastResult.meta" :key="k">
+                <dt><span x-text="k"></span></dt>
+                <dd><span x-text="v"></span></dd>
+              </template>
+            </dl>
+            <a class="btn ghost" :href="'/output/'+lastResult.name" :download="lastResult.name" target="_blank">Download</a>
+          </template>
+          <template x-if="lastResult.kind === 'metadata'">
+            <dl>
+              <template x-for="(v, k) in lastResult.meta" :key="k">
+                <dt><span x-text="k"></span></dt>
+                <dd><span x-text="fmtVal(v)"></span></dd>
+              </template>
+            </dl>
+          </template>
+        </div>
+        <div class="actions">
+          <button class="btn danger ghost" @click="clearOutputs()" :disabled="!outputs.length">Clear outputs</button>
+          <button class="btn ghost" @click="clearAll()" :disabled="!files.length && !outputs.length">Clear all</button>
+        </div>
+      </section>
+    </div>
+
+    <div class="toast" :class="toast.cls" x-show="toast.show" x-text="toast.msg"></div>
+  </div>
+
+  <script>
+    function app() {
+      return {
+        files: [],
+        outputs: [],
+        baseUrl: window.location.origin,
+        loading: false,
+        progressPct: 0,
+        logs: [],
+        lastResult: null,
+        toast: { show: false, msg: "", cls: "" },
+        statusText: "checking",
+        statusDot: "ok",
+        statusChip: "",
+
+        cv: {
+          format: "mp4",
+          video_codec: "libx264",
+          audio_codec: "aac",
+          crf: 23,
+          preset: "medium",
+          resolution: "",
+          fps: null,
+          bitrate: "",
+          audio_bitrate: "",
+          crfLabel: "CRF 23",
+        },
+        sp: { start: "00:00:00", end: "00:00:10" },
+        ex: { audioFormat: "mp3", frameInterval: 1, frameFormat: "png" },
+        ar: { width: 1920, height: 1080, method: "pad", crf: 23 },
+        cmp: { crf: 28, preset: "slow", audio_bitrate: "128k", format: "mp4", maxSizeMb: "" },
+
+        async init() {
+          await this.ping();
+          this.log("ready", "dim");
+        },
+
+        async ping() {
+          try {
+            const r = await fetch("/health", { cache: "no-store" });
+            if (!r.ok) throw new Error("unhealthy");
+            const j = await r.json();
+            this.statusText = j.status === "ok" ? "api ok" : "degraded";
+            this.statusDot = j.ffmpeg ? "ok" : "err";
+            this.statusChip = j.ffmpeg
+              ? "margin-left:auto"
+              : "margin-left:auto;color:var(--danger)";
+            if (!j.ffmpeg) this.log("ffmpeg not found on the server — endpoints will fail", "err");
+          } catch (e) {
+            this.statusText = "unreachable";
+            this.statusDot = "err";
+            this.statusChip = "margin-left:auto;color:var(--danger)";
+            this.log("api unreachable: " + (e.message || ""), "err");
+          }
+        },
+
+        onFilesSelected(e) {
+          const items = Array.from(e.target.files || []);
+          for (const f of items) {
+            this.files.push({ id: crypto.randomUUID(), name: f.name, size: f.size, file: f });
+          }
+          this.log(items.length + " file(s) added", "ok");
+          e.target.value = "";
+        },
+
+        async uploadFile(file) {
+          const fd = new FormData();
+          fd.append("file", file);
+          const r = await this.post("/upload", fd, true);
+          return r;
+        },
+
+        async post(path, body, isForm = false) {
+          this.loading = true;
+          this.progressPct = 10;
+          this.log("→ " + path, "dim");
+          try {
+            const opts = {
+              method: "POST",
+              headers: isForm ? {} : { "Content-Type": "application/json" },
+              body: isForm ? body : JSON.stringify(body)
+            };
+            const r = await fetch(path, opts);
+            this.progressPct = 80;
+            const text = await r.text();
+            let json = null;
+            try { json = JSON.parse(text); } catch(_) {}
+            if (!r.ok) {
+              const detail = json?.detail || text || r.statusText;
+              throw new Error(String(detail));
+            }
+            this.progressPct = 100;
+            this.log("← ok", "ok");
+            return json || text;
+          } catch (e) {
+            this.log("← " + e.message, "err");
+            throw e;
+          } finally {
+            this.loading = false;
+            setTimeout(() => { this.progressPct = 0; }, 600);
+          }
+        },
+
+        async convert() {
+          if (!this.files.length) return this.error("upload a file first");
+          const file = this.files[0].file;
+          const fd = new FormData();
+          fd.append("file", file);
+          const opts = {
+            format: this.cv.format,
+            video_codec: this.cv.video_codec,
+            audio_codec: this.cv.audio_codec || "aac",
+            crf: Number(this.cv.crf),
+            preset: this.cv.preset,
+            resolution: this.cv.resolution || null,
+            fps: this.cv.fps ? Number(this.cv.fps) : null,
+            bitrate: this.cv.bitrate || null,
+            audio_bitrate: this.cv.audio_bitrate || null,
+            keep_original: false,
+          };
+          try {
+            const res = await this.post("/convert", fd, true);
+            await this.keepOutput(res);
+          } catch (e) { this.error(e.message); }
+        },
+
+        async split() {
+          if (!this.files.length) return this.error("upload a file first");
+          const file = this.files[0].file;
+          const fd = new FormData();
+          fd.append("file", file);
+          const opts = { start: this.sp.start, end: this.sp.end, format: "mp4", video_codec: "copy", audio_codec: "copy" };
+          try {
+            const res = await this.post("/split", fd, true);
+            await this.keepOutput(res);
+          } catch (e) { this.error(e.message); }
+        },
+
+        async merge() {
+          if (this.files.length < 2) return this.error("upload at least 2 files");
+          const fd = new FormData();
+          for (const f of this.files) fd.append("files", f.file);
+          const opts = { format: "mp4", video_codec: "copy", audio_codec: "copy" };
+          try {
+            const res = await this.post("/merge", fd, true);
+            await this.keepOutput(res);
+          } catch (e) { this.error(e.message); }
+        },
+
+        async extractAudio() {
+          if (!this.files.length) return this.error("upload a file first");
+          const file = this.files[0].file;
+          const fd = new FormData();
+          fd.append("file", file);
+          const opts = { format: this.ex.audioFormat, audio_codec: audioCodecFor(this.ex.audioFormat), bitrate: "192k" };
+          try {
+            const res = await this.post("/extract/audio", fd, true);
+            await this.keepOutput(res);
+          } catch (e) { this.error(e.message); }
+        },
+
+        async extractFrames() {
+          if (!this.files.length) return this.error("upload a file first");
+          const file = this.files[0].file;
+          const fd = new FormData();
+          fd.append("file", file);
+          try {
+            const res = await this.post("/extract/frames?interval_sec="+this.ex.frameInterval+"&format="+this.ex.frameFormat, fd, true);
+            this.lastResult = { kind: "file", name: res.count + " frames", meta: { count: res.count, format: res.format, interval_sec: res.interval_sec } };
+            this.log("frames extracted: " + res.count, "ok");
+          } catch (e) { this.error(e.message); }
+        },
+
+        async extractMetadata() {
+          if (!this.files.length) return this.error("upload a file first");
+          const file = this.files[0].file;
+          const fd = new FormData();
+          fd.append("file", file);
+          try {
+            const meta = await this.post("/extract/metadata", fd, true);
+            this.lastResult = { kind: "metadata", meta: {
+              duration_sec: fmtDur(meta.duration_sec),
+              size_bytes: fmtBytes(meta.size_bytes),
+              bitrate_kbps: meta.bitrate_kbps != null ? Math.round(meta.bitrate_kbps) + " kbps" : null,
+              streams: meta.streams.map(s => s.codec_type + ": " + s.codec_name).join(", "),
+            }};
+          } catch (e) { this.error(e.message); }
+        },
+
+        async aspectRatio() {
+          if (!this.files.length) return this.error("upload a file first");
+          const file = this.files[0].file;
+          const fd = new FormData();
+          fd.append("file", file);
+          const opts = {
+            width: Number(this.ar.width),
+            height: Number(this.ar.height),
+            method: this.ar.method,
+            video_codec: "libx264",
+            crf: Number(this.ar.crf),
+          };
+          try {
+            const res = await this.post("/aspect_ratio", fd, true);
+            await this.keepOutput(res);
+          } catch (e) { this.error(e.message); }
+        },
+
+        async compress() {
+          if (!this.files.length) return this.error("upload a file first");
+          const file = this.files[0].file;
+          const fd = new FormData();
+          fd.append("file", file);
+          const opts = {
+            crf: Number(this.cmp.crf),
+            preset: this.cmp.preset || "slow",
+            audio_bitrate: this.cmp.audio_bitrate || "128k",
+            format: this.cmp.format || "mp4",
+            max_size_mb: this.cmp.maxSizeMb ? Number(this.cmp.maxSizeMb) : null,
+          };
+          try {
+            const res = await this.post("/compress", fd, true);
+            await this.keepOutput(res);
+          } catch (e) { this.error(e.message); }
+        },
+
+        async keepOutput(res) {
+          if (res.file_id) {
+            this.outputs.push({ id: crypto.randomUUID(), name: res.file_id, size: 0 });
+            this.lastResult = { kind: "file", name: res.file_id };
+            this.log("output: " + res.file_id, "ok");
+          } else {
+            this.lastResult = { kind: "file", name: "done", meta: res };
+            this.log("done", "ok");
+          }
+        },
+
+        clearOutputs() { this.outputs = []; this.lastResult = null; this.log("outputs cleared", "dim"); },
+        clearAll() { this.files = []; this.outputs = []; this.lastResult = null; this.log("cleared", "dim"); },
+
+        error(msg) { this.toast = { show: true, msg, cls: "err" }; this.log(msg, "err");
+          setTimeout(() => this.toast.show = false, 2600); },
+        log(line, cls = "") { this.logs.push({ line, cls }); if (this.logs.length > 120) this.logs.shift(); },
+
+        fmtBytes(b) {
+          if (!b && b !== 0) return "";
+          const u = ["B","KB","MB","GB"];
+          let i = 0, v = Number(b);
+          while (v >= 1024 && i < u.length - 1) { v /= 1024; i++; }
+          return v.toFixed(i ? 1 : 0) + " " + u[i];
+        },
+        fmtVal(v) {
+          if (typeof v === "number") return fmtBytes(v) || v;
+          return v;
+        },
+      };
+    }
+
+    function audioCodecFor(format) {
+      return ({ mp3: "libmp3lame", m4a: "aac", wav: "pcm_s16le", flac: "flac", ogg: "libvorbis" })[format] || "aac";
+    }
+
+    function fmtDur(sec) {
+      if (!sec && sec !== 0) return "";
+      sec = Number(sec);
+      const h = Math.floor(sec / 3600);
+      const m = Math.floor((sec % 3600) / 60);
+      const s = Math.floor(sec % 60);
+      if (h) return `${h}:${String(m).padStart(2,"0")}:${String(s).padStart(2,"0")}`;
+      return `${m}:${String(s).padStart(2,"0")}`;
+    }
+  </script>
+</body>
+</html>
