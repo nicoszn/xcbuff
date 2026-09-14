@@ -256,5 +256,68 @@
   </div>
 
   <script src="app.js"></script>
+  <script>
+    document.addEventListener('alpine:init', () => {
+      Alpine.data('app', () => ({
+        get files() { return Alpine.store('ffmpeg').files; },
+        get outputs() { return Alpine.store('ffmpeg').outputs; },
+        get loading() { return Alpine.store('ffmpeg').loading; },
+        get progressPct() { return Alpine.store('ffmpeg').progressPct; },
+        get logs() { return Alpine.store('ffmpeg').logs; },
+        get lastResult() { return Alpine.store('ffmpeg').lastResult; },
+        get toast() { return Alpine.store('ffmpeg').toast; },
+        get statusText() { return Alpine.store('ffmpeg').statusText; },
+        get statusDot() { return Alpine.store('ffmpeg').statusDot; },
+        get statusChip() { return Alpine.store('ffmpeg').statusChip; },
+        get cv() { return Alpine.store('ffmpeg').convert; },
+        get sp() { return Alpine.store('ffmpeg').split; },
+        get ex() { return Alpine.store('ffmpeg').extract; },
+        get ar() { return Alpine.store('ffmpeg').aspect; },
+        get cmp() { return Alpine.store('ffmpeg').compress; },
+        init() {
+          Alpine.store('ffmpeg').ping();
+        },
+        onFilesSelected(e) {
+          Alpine.store('ffmpeg').onFilesSelected(e);
+        },
+        async convert() {
+          await Alpine.store('ffmpeg').convert();
+        },
+        async split() {
+          await Alpine.store('ffmpeg').split();
+        },
+        async merge() {
+          await Alpine.store('ffmpeg').merge();
+        },
+        async extractAudio() {
+          await Alpine.store('ffmpeg').extractAudio();
+        },
+        async extractFrames() {
+          await Alpine.store('ffmpeg').extractFrames();
+        },
+        async extractMetadata() {
+          await Alpine.store('ffmpeg').extractMetadata();
+        },
+        async aspectRatio() {
+          await Alpine.store('ffmpeg').aspectRatio();
+        },
+        async compress() {
+          await Alpine.store('ffmpeg').compress();
+        },
+        clearOutputs() {
+          Alpine.store('ffmpeg').clearOutputs();
+        },
+        clearAll() {
+          Alpine.store('ffmpeg').clearAll();
+        },
+        fmtBytes(b) {
+          return Alpine.store('ffmpeg').fmtBytes(b);
+        },
+        fmtVal(v) {
+          return Alpine.store('ffmpeg').fmtVal(v);
+        },
+      }));
+    });
+  </script>
 </body>
 </html>
